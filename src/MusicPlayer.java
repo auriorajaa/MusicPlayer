@@ -1,13 +1,18 @@
 import javazoom.jl.player.advanced.AdvancedPlayer;
+import javazoom.jl.player.advanced.PlaybackEvent;
+import javazoom.jl.player.advanced.PlaybackListener;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 
-public class MusicPlayer {
+public class MusicPlayer extends PlaybackListener {
     private Song currentSong;
 
     //use jlayer library to create an AdvancedPlayer obj to play music
     private AdvancedPlayer advancedPlayer;
+
+    //pause boolean
+    private boolean isPaused;
 
     //constructor
     public MusicPlayer() {
@@ -23,6 +28,23 @@ public class MusicPlayer {
         }
     }
 
+    public void pauseSong() {
+        if (advancedPlayer != null) {
+            isPaused = true;
+
+            //stop the player
+            stopSong();
+        }
+    }
+
+    public void stopSong() {
+        if (advancedPlayer != null) {
+            advancedPlayer.stop();
+            advancedPlayer.close();
+            advancedPlayer = null;
+        }
+    }
+
     public void playCurrentSong() {
         try {
             //read mp3 audio data
@@ -31,6 +53,7 @@ public class MusicPlayer {
 
             //create new AdvancedPlayer
             advancedPlayer = new AdvancedPlayer(bufferedInputStream);
+            advancedPlayer.setPlayBackListener(this);
 
             //start music
             startMusicThread();
@@ -52,6 +75,20 @@ public class MusicPlayer {
             }
         }).start();
     }
+
+    @Override
+    public void playbackStarted(PlaybackEvent evt) {
+        //this method gets called in the beginning of song
+        System.out.println("Playback started");
+    }
+
+    @Override
+    public void playbackFinished(PlaybackEvent evt) {
+        //this method gets called when song is finished or closed
+        System.out.println("Playback finished");
+    }
+
+
 
 
 
