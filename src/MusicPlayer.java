@@ -14,6 +14,9 @@ public class MusicPlayer extends PlaybackListener {
     //pause boolean
     private boolean isPaused;
 
+    //used for pausing and resuming
+    private int currentFrame;
+
     //constructor
     public MusicPlayer() {
 
@@ -46,6 +49,8 @@ public class MusicPlayer extends PlaybackListener {
     }
 
     public void playCurrentSong() {
+        if (currentSong == null) return;
+
         try {
             //read mp3 audio data
             FileInputStream fileInputStream = new FileInputStream(currentSong.getFilePath());
@@ -67,8 +72,13 @@ public class MusicPlayer extends PlaybackListener {
             @Override
             public void run() {
                 try {
-                    //play music
-                    advancedPlayer.play();
+                    if (isPaused) {
+                        //resume music from last frame
+                        advancedPlayer.play(currentFrame, Integer.MAX_VALUE);
+                    } else {
+                        //play music from beginning
+                        advancedPlayer.play();
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -86,10 +96,11 @@ public class MusicPlayer extends PlaybackListener {
     public void playbackFinished(PlaybackEvent evt) {
         //this method gets called when song is finished or closed
         System.out.println("Playback finished");
+
+        //System.out.println("Stopped at " + evt.getFrame());
+
+        if (isPaused) {
+            currentFrame += (int) ((double) evt.getFrame() * currentSong.getFrameRatePerMilliseconds());
+        }
     }
-
-
-
-
-
 }
