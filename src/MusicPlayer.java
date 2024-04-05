@@ -6,7 +6,14 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 
 public class MusicPlayer extends PlaybackListener {
+    //this will be used to update isPaused more synchronous
+    private static final Object playSignal = new Object();
+
+    //reference to updating the gui
+    private MusicPlayerGUI musicPlayerGUI;
+
     private Song currentSong;
+    public Song getCurrentSong() {return currentSong;}
 
     //use jlayer library to create an AdvancedPlayer obj to play music
     private AdvancedPlayer advancedPlayer;
@@ -16,10 +23,19 @@ public class MusicPlayer extends PlaybackListener {
 
     //used for pausing and resuming
     private int currentFrame;
+    public void setCurrentFrame(int frame) {
+        currentFrame = frame;
+    }
+
+    //track how many milliseconds has passed since playing the song (for slider)
+    private int currentTimeInMilli;
+    public void setCurrentTimeInMilli(int timeInMilli) {
+        currentTimeInMilli = timeInMilli;
+    }
 
     //constructor
-    public MusicPlayer() {
-
+    public MusicPlayer(MusicPlayerGUI musicPlayerGUI) {
+        this.musicPlayerGUI = musicPlayerGUI;
     }
 
     public void loadSong(Song song) {
@@ -62,6 +78,9 @@ public class MusicPlayer extends PlaybackListener {
 
             //start music
             startMusicThread();
+
+            //start playback slider thread
+            startPlaybackSliderThread();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -73,6 +92,14 @@ public class MusicPlayer extends PlaybackListener {
             public void run() {
                 try {
                     if (isPaused) {
+                        synchronized (playSignal) {
+                            //update isPaused flag
+                            isPaused = false;
+
+                            //notify the other thread
+                            playSignal.notify();
+                        }
+
                         //resume music from last frame
                         advancedPlayer.play(currentFrame, Integer.MAX_VALUE);
                     } else {
@@ -81,6 +108,43 @@ public class MusicPlayer extends PlaybackListener {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    //thread for handling slider update
+    private void startPlaybackSliderThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (isPaused) {
+                    try {
+                        synchronized (playSignal) {
+                            playSignal.wait();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                //System.out.println("isPaused: " + isPaused);
+
+                while (!isPaused) {
+                    try {
+                        //increment current time in milli
+                        currentTimeInMilli++;
+
+                        //calculate into frame value
+                        int calculatedFrame = (int) ((double) currentTimeInMilli * 2.08 * currentSong.getFrameRatePerMilliseconds());
+
+                        //update the gui
+                        musicPlayerGUI.setPlaybackSliderValue(calculatedFrame);
+
+                        Thread.sleep(1);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }).start();
